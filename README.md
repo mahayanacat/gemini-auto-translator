@@ -10,8 +10,7 @@
 3.安装脚本开头所需要的所有库：在windows系统终端powershell中以pip install +库名 安装。
 
 4.在c:/program files下安装Tesseract、Poppler（用于 pdf2image），实现对扫描本pdf的ocr。
-        Tesseract（官方下载：https://github.com/UB-Mannheim/tesseract/releases）下载适用于 Windows 64 位的安装包（比如 tesseract-ocr-w64-setup-5.x.x.exe）。安装时勾选安装语言库.
-        
+        Tesseract（官方下载：https://github.com/UB-Mannheim/tesseract/releases）下载适用于 Windows 64 位的安装包（比如 tesseract-ocr-w64-setup-5.x.x.exe）。安装时勾选安装语言库。
         Poppler（官方下载：https://github.com/oschwartz10612/poppler-windows/releases）下载最新版本的 .zip 文件（比如 poppler-24.02.0-0.zip）。将下载的 .zip 文件解压到C:\Program 
         Files\Poppler
         在系统环境变量的path中添加二者：C:\Program Files\Poppler\bin；C:\Program Files\Tesseract-OCR（具体路径按你的实际情况）
