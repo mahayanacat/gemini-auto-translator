@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini 全自动翻译机</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f0f0; }
+    h2, h3 { color: #333; }
+    label { margin: 5px; display: inline-block; width: 120px; }
+    input, select, button { margin: 5px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 16px; background-color: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background-color: #45a049; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    #status { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #fff; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+    .section { margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h2>Gemini 翻译工具</h2>
+  
+  <div class="section">
+    <label>选择工程:</label>
+    <select id="projectSelect">
+      <option value="">新工程</option>
+    </select>
+  </div>
+
+  <div class="section" id="inputSection">
+    <label>文件路径:</label><input type="text" id="file_path" placeholder="请输入文件路径"><br>
+    <label>翻译风格:</label><input type="text" id="style" placeholder="请输入翻译风格"><br>
+    <label>温度:</label><input type="number" id="temperature" step="0.1" min="0" max="1" placeholder="0-1"><br>
+    <label>API Key:</label><input type="text" id="api_key" placeholder="请输入 API Key"><br>
+    <label>模型 URL:</label><input type="text" id="model_url" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" placeholder="请输入模型 URL"><br>
+    <label>Batch Size:</label><input type="number" id="batch_size_input" min="1" value="10" placeholder="请输入batch_size"><br>
+    <label>Chunk Size:</label><input type="number" id="chunk_size_input" min="1" value="100" placeholder="请输入chunk_size"><br>
+    <label>HTTP 代理:</label><input type="text" id="http_proxy" placeholder="如 http://127.0.0.1:7890"><br>
+    <label>HTTPS 代理:</label><input type="text" id="https_proxy" placeholder="如 https://127.0.0.1:7890"><br>
+    <label><input type="checkbox" id="rememberMe"> 记住我</label>
+  </div>
+
+  <div class="section" id="buttonSection">
+    <button id="startBtn">启动翻译</button>
+    <button id="pauseBtn" disabled>暂停</button>
+    <button id="resumeBtn">继续</button>
+    <button id="stopBtn">清除</button>
+  </div>
+
+  <div id="status">
+    <h3>状态信息</h3>
+    <div id="statusContent"></div>
+  </div>
+  
+  <script>
+    function updateStatus(msg) {
+      const statusDiv = document.getElementById("statusContent");
+      statusDiv.innerHTML += `<p>${new Date().toLocaleString()} - ${msg}</p>`;
+      statusDiv.scrollTop = statusDiv.scrollHeight;
+    }
+
+    function updateButtonStates(running) {
+      document.getElementById("startBtn").disabled = running;
+      document.getElementById("pauseBtn").disabled = !running;
+      document.getElementById("resumeBtn").disabled = running;
+      document.getElementById("stopBtn").disabled = false; // 停止按钮始终启用
+    }
+
+    function loadUnfinishedProjects() {
+      fetch('/unfinished_projects')
+        .then(response => response.json())
+        .then(data => {
+          const select = document.getElementById("projectSelect");
+          select.options.length = 1;
+          if (data.unfinished_projects) {
+            data.unfinished_projects.forEach(proj => {
+              const option = document.createElement("option");
+              option.value = proj;
+              option.text = proj;
+              select.appendChild(option);
+            });
+            updateStatus("未完成工程列表已更新");
+          } else {
+            updateStatus(data.message || "没有未完成工程");
+          }
+        })
+        .catch(err => updateStatus("获取未完成工程错误：" + err));
+    }
+
+    window.addEventListener("load", function() {
+      loadUnfinishedProjects();
+      updateButtonStates(false);
+      if (localStorage.getItem("rememberMe") === "true") {
+        document.getElementById("rememberMe").checked = true;
+        document.getElementById("api_key").value = localStorage.getItem("api_key") || "";
+        document.getElementById("model_url").value = localStorage.getItem("model_url") || "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+        document.getElementById("http_proxy").value = localStorage.getItem("http_proxy") || "";
+        document.getElementById("https_proxy").value = localStorage.getItem("https_proxy") || "";
+        document.getElementById("batch_size_input").value = localStorage.getItem("batch_size") || "10";
+        document.getElementById("chunk_size_input").value = localStorage.getItem("chunk_size") || "100";
+      }
+    });
+
+    document.getElementById("projectSelect").addEventListener("change", function () {
+      const projectName = this.value;
+      if (projectName) {
+        const fd = new FormData();
+        fd.append("project_name", projectName);
+        fetch('/load_project_params', { method: "POST", body: fd })
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById("file_path").value = data.file_path || "";
+            document.getElementById("style").value = data.style || "";
+            document.getElementById("temperature").value = data.temperature || "";
+            updateStatus(`已加载工程 ${projectName} 的参数，文件路径：${data.file_path}`);
+            
+            const loadFd = new FormData();
+            loadFd.append("file_path", data.file_path || "");
+            loadFd.append("style", data.style || "");
+            loadFd.append("temperature", data.temperature || "");
+            fetch("/load_project", { method: "POST", body: loadFd })
+              .then(res => res.json())
+              .then(resData => updateStatus("后端已加载工程参数：" + resData.message))
+              .catch(err => updateStatus("加载工程参数到后端失败：" + err));
+          })
+          .catch(err => updateStatus("加载旧工程参数错误：" + err));
+      } else {
+        document.getElementById("file_path").value = "";
+        document.getElementById("style").value = "";
+        document.getElementById("temperature").value = "";
+        updateStatus("已选择新工程，清空参数");
+      }
+    });
+
+    document.getElementById("startBtn").addEventListener("click", function () {
+      const filePath = document.getElementById("file_path").value;
+      const apiKey = document.getElementById("api_key").value;
+      const modelUrl = document.getElementById("model_url").value || "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+      if (!filePath) {
+        updateStatus("错误：文件路径不能为空！");
+        return;
+      }
+      if (!apiKey) {
+        updateStatus("错误：API Key 不能为空！");
+        return;
+      }
+      if (!modelUrl) {
+        updateStatus("错误：模型 URL 不能为空！");
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("file_path", filePath);
+      fd.append("style", document.getElementById("style").value);
+      fd.append("temperature", document.getElementById("temperature").value || "0.7");
+      fd.append("api_key", apiKey);
+      fd.append("model_url", modelUrl);
+      fd.append("batch_size", document.getElementById("batch_size_input").value || "10");
+      fd.append("chunk_size", document.getElementById("chunk_size_input").value || "100");
+      fd.append("http_proxy", document.getElementById("http_proxy").value);
+      fd.append("https_proxy", document.getElementById("https_proxy").value);
+
+      console.log("前端提交参数：", {
+        file_path: fd.get("file_path"),
+        style: fd.get("style"),
+        temperature: fd.get("temperature"),
+        api_key: fd.get("api_key"),
+        model_url: fd.get("model_url"),
+        batch_size: fd.get("batch_size"),
+        chunk_size: fd.get("chunk_size"),
+        http_proxy: fd.get("http_proxy"),
+        https_proxy: fd.get("https_proxy")
+      });
+
+      if (document.getElementById("rememberMe").checked) {
+        localStorage.setItem("rememberMe", "true");
+        localStorage.setItem("api_key", apiKey);
+        localStorage.setItem("model_url", modelUrl);
+        localStorage.setItem("http_proxy", fd.get("http_proxy"));
+        localStorage.setItem("https_proxy", fd.get("https_proxy"));
+        localStorage.setItem("batch_size", fd.get("batch_size"));
+        localStorage.setItem("chunk_size", fd.get("chunk_size"));
+      } else {
+        localStorage.clear();
+      }
+
+      fetch("/start_translation", { method: "POST", body: fd })
+        .then(res => res.json())
+        .then(data => {
+          updateStatus("启动翻译：" + data.message);
+          updateButtonStates(true);
+        })
+        .catch(err => updateStatus("启动翻译错误：" + err));
+    });
+
+    document.getElementById("pauseBtn").addEventListener("click", function () {
+      const fd = new FormData();
+      fd.append("file_path", document.getElementById("file_path").value);
+      fd.append("style", document.getElementById("style").value);
+      fd.append("temperature", document.getElementById("temperature").value || "0.7");
+      fetch("/pause", { method: "POST", body: fd })
+        .then(res => res.json())
+        .then(data => {
+          updateStatus("暂停：" + data.message);
+          updateButtonStates(false);
+        })
+        .catch(err => updateStatus("暂停错误：" + err));
+    });
+
+    document.getElementById("resumeBtn").addEventListener("click", function () {
+      const filePath = document.getElementById("file_path").value;
+      const apiKey = document.getElementById("api_key").value;
+      const modelUrl = document.getElementById("model_url").value || "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+      if (!filePath) {
+        updateStatus("错误：文件路径不能为空！");
+        return;
+      }
+      if (!apiKey) {
+        updateStatus("错误：API Key 不能为空！");
+        return;
+      }
+      if (!modelUrl) {
+        updateStatus("错误：模型 URL 不能为空！");
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("file_path", filePath);
+      fd.append("style", document.getElementById("style").value);
+      fd.append("temperature", document.getElementById("temperature").value || "0.7");
+      fd.append("api_key", apiKey);
+      fd.append("model_url", modelUrl);
+      fd.append("batch_size", document.getElementById("batch_size_input").value || "10");
+      fd.append("chunk_size", document.getElementById("chunk_size_input").value || "100");
+      fd.append("http_proxy", document.getElementById("http_proxy").value);
+      fd.append("https_proxy", document.getElementById("https_proxy").value);
+
+      fetch("/resume", { method: "POST", body: fd })
+        .then(res => res.json())
+        .then(data => {
+          updateStatus("继续：" + data.message);
+          updateButtonStates(true);
+        })
+        .catch(err => updateStatus("继续错误：" + err));
+    });
+
+    document.getElementById("stopBtn").addEventListener("click", function () {
+      const fd = new FormData();
+      fd.append("file_path", document.getElementById("file_path").value);
+      fd.append("style", document.getElementById("style").value);
+      fd.append("temperature", document.getElementById("temperature").value || "0.7");
+      fetch("/stop", { method: "POST", body: fd })
+        .then(res => res.json())
+        .then(data => {
+          updateStatus("停止：" + data.message);
+          updateButtonStates(false);
+        })
+        .catch(err => updateStatus("停止错误：" + err));
+    });
+  </script>
+</body>
+</html>
