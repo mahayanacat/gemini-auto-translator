@@ -9,15 +9,11 @@
 
 3.安装脚本开头所需要的所有库：在windows系统终端powershell中以pip install +库名 安装。
 
-4.在c:/program files下安装Tesseract、Poppler（用于 pdf2image），实现对扫描本pdf的ocr。
-        Tesseract（官方下载：https://github.com/UB-Mannheim/tesseract/releases）下载适用于 Windows 64 位的安装包（比如 tesseract-ocr-w64-setup-5.x.x.exe）。安装时勾选安装语言库。
-        Poppler（官方下载：https://github.com/oschwartz10612/poppler-windows/releases）下载最新版本的 .zip 文件（比如 poppler-24.02.0-0.zip）。将下载的 .zip 文件解压到C:\Program 
-        Files\Poppler
-        在系统环境变量的path中添加二者：C:\Program Files\Poppler\bin；C:\Program Files\Tesseract-OCR（具体路径按你的实际情况）
+4.在c:/program files下安装Tesseract、Poppler（用于 pdf2image），实现对扫描本pdf的ocr。 Tesseract（官方下载：https://github.com/UB-Mannheim/tesseract/releases）下载适用于 Windows 64 位的安装包（比如 tesseract-ocr-w64-setup-5.x.x.exe）。安装时勾选安装语言库。 Poppler（官方下载：https://github.com/oschwartz10612/poppler-windows/releases）下载最新版本的 .zip 文件（比如 poppler-24.02.0-0.zip）。将下载的 .zip 文件解压到C:\Program Files\Poppler 在系统环境变量的path中添加二者：C:\Program Files\Poppler\bin；C:\Program Files\Tesseract-OCR（具体路径按你的实际情况）
 
 5.双击运行start.bat文件，或在python编辑器中运行main.py。此时会弹出终端信息，运行的所有过程、报错都会在终端显示，终端全程必须保持打开状态，万不可关闭。
 
-6.在弹出的页面上手动填写api\url\proxy\翻译和校对批次,待翻译文件的本地地址、希望翻译的风格（用自然语言填写，填多少都行，但太长会浪费api。基本的设定已经在程序中设置好了。）温度变量（控制输出结果的自由度，推荐0.9左右，太低或太高都会影响结果质量）。
+6.在弹出的页面上手动填写api\url\proxy，翻译和校对批次（建议都填10以下，以免超限）,待翻译文件的本地地址、希望翻译的风格（用自然语言填写，填多少都行，但太长会浪费api。基本的设定已经在程序中设置好了。）温度变量（控制输出结果的自由度，推荐0.9左右，太低或太高都会影响结果质量）。
 
 7.点击“开始翻译”。翻译过程中可以暂停。暂停后可以继续。程序意外崩溃或关闭后，下次启动可以继续进行上次未完成的工作。确定整个文档翻译并校对完成后，按下清除键，可清除所有临时文档。注意：若过早按下清除，工作将无法恢复。
 
@@ -25,16 +21,15 @@
 
 9.出于api上限考虑，本程序暂时只支持单个工程。可选择一个已存在的未完成工程继续工作。
 
-
 注意：
 
 1.AI的工作结果与模型选择、参数（温度、batch_saize、chunk_size）、提示词设置成正相关。若发现结果不达预期，请自行实验参数和提示词设置，不同的设置会造成结果巨大的差异。
 
-2.gmini的模型有每日限额。不同模型限额不同。达到上限后，api五次请求失败，程序就会自动停止。等限额恢复后再启动程序，可继续上次的工作。所以理论上只要有额度，多长的文本都能译完。
+2.gmini的模型有每日限额。不同模型限额不同。达到上限后，api五次请求失败，报429错误，程序就会自动停止。等限额恢复后再启动程序，可继续上次的工作。所以理论上只要有额度，多长的文本都能译完。
 
-3.本程序使用的分段法是以换行符分段，未必在所有语言的识别上都合适，目前适合常见的汉、英、日、藏、梵文的格式规整的文档。
+3.本程序使用的分段法是以换行符分段，未必在所有语言的识别上都合适，目前适合常见的汉、英、日语等，以及藏、梵文的格式规整的文档。
 
-4.自检逻辑能在翻译阶段自动发现漏译、缺损，校对阶段还能再补一遍。但api返回的信息不一定都是完整的，所以若要万无一失，仍需人工核验。
+4.自检逻辑能在翻译阶段自动发现漏译、缺损。校对阶段的逻辑是逐句按编号与原文校对，因此还能再补一遍。但api返回的信息不一定都是完整的（模型抽风、网络不佳都会导致返回的信息缺损），所以若要万无一失，仍需人工核验。
 
 5.如果工作中点击了暂停，请务必等看到终端显示临时文件都已存入temp文件夹再点击继续，这个过程有点慢，请耐心等待数秒。没有必要的情况下尽量不点击暂停，让程序自己跑完。
 
@@ -49,7 +44,5 @@ CPU：Intel i5 或 AMD Ryzen 5
 内存：8GB
 
 硬盘：10GB 可用空间
-
-
 
 更快的网络连接
