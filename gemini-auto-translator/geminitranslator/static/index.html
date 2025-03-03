@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <h2>Gemini 翻译工具</h2>
+  <h2>Gemini 全自动翻译机</h2>
   
   <div class="section">
     <label>选择工程:</label>
@@ -31,8 +31,8 @@
     <label>温度:</label><input type="number" id="temperature" step="0.1" min="0" max="1" placeholder="0-1"><br>
     <label>API Key:</label><input type="text" id="api_key" placeholder="请输入 API Key"><br>
     <label>模型 URL:</label><input type="text" id="model_url" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" placeholder="请输入模型 URL"><br>
-    <label>Batch Size:</label><input type="number" id="batch_size_input" min="1" value="10" placeholder="请输入batch_size"><br>
-    <label>Chunk Size:</label><input type="number" id="chunk_size_input" min="1" value="100" placeholder="请输入chunk_size"><br>
+    <label>翻译批次大小:</label><input type="number" id="batch_size_input" min="1" value="10" placeholder="请输入翻译batch_size"><br>
+    <label>校对批次大小:</label><input type="number" id="batch_size_check_input" min="1" value="5" placeholder="请输入校对batch_size"><br>
     <label>HTTP 代理:</label><input type="text" id="http_proxy" placeholder="如 http://127.0.0.1:7890"><br>
     <label>HTTPS 代理:</label><input type="text" id="https_proxy" placeholder="如 https://127.0.0.1:7890"><br>
     <label><input type="checkbox" id="rememberMe"> 记住我</label>
@@ -61,7 +61,7 @@
       document.getElementById("startBtn").disabled = running;
       document.getElementById("pauseBtn").disabled = !running;
       document.getElementById("resumeBtn").disabled = running;
-      document.getElementById("stopBtn").disabled = false; // 停止按钮始终启用
+      document.getElementById("stopBtn").disabled = false;
     }
 
     function loadUnfinishedProjects() {
@@ -95,7 +95,7 @@
         document.getElementById("http_proxy").value = localStorage.getItem("http_proxy") || "";
         document.getElementById("https_proxy").value = localStorage.getItem("https_proxy") || "";
         document.getElementById("batch_size_input").value = localStorage.getItem("batch_size") || "10";
-        document.getElementById("chunk_size_input").value = localStorage.getItem("chunk_size") || "100";
+        document.getElementById("batch_size_check_input").value = localStorage.getItem("batch_size_check") || "5";
       }
     });
 
@@ -155,21 +155,9 @@
       fd.append("api_key", apiKey);
       fd.append("model_url", modelUrl);
       fd.append("batch_size", document.getElementById("batch_size_input").value || "10");
-      fd.append("chunk_size", document.getElementById("chunk_size_input").value || "100");
+      fd.append("batch_size_check", document.getElementById("batch_size_check_input").value || "5");
       fd.append("http_proxy", document.getElementById("http_proxy").value);
       fd.append("https_proxy", document.getElementById("https_proxy").value);
-
-      console.log("前端提交参数：", {
-        file_path: fd.get("file_path"),
-        style: fd.get("style"),
-        temperature: fd.get("temperature"),
-        api_key: fd.get("api_key"),
-        model_url: fd.get("model_url"),
-        batch_size: fd.get("batch_size"),
-        chunk_size: fd.get("chunk_size"),
-        http_proxy: fd.get("http_proxy"),
-        https_proxy: fd.get("https_proxy")
-      });
 
       if (document.getElementById("rememberMe").checked) {
         localStorage.setItem("rememberMe", "true");
@@ -178,7 +166,7 @@
         localStorage.setItem("http_proxy", fd.get("http_proxy"));
         localStorage.setItem("https_proxy", fd.get("https_proxy"));
         localStorage.setItem("batch_size", fd.get("batch_size"));
-        localStorage.setItem("chunk_size", fd.get("chunk_size"));
+        localStorage.setItem("batch_size_check", fd.get("batch_size_check"));
       } else {
         localStorage.clear();
       }
@@ -231,7 +219,7 @@
       fd.append("api_key", apiKey);
       fd.append("model_url", modelUrl);
       fd.append("batch_size", document.getElementById("batch_size_input").value || "10");
-      fd.append("chunk_size", document.getElementById("chunk_size_input").value || "100");
+      fd.append("batch_size_check", document.getElementById("batch_size_check_input").value || "5");
       fd.append("http_proxy", document.getElementById("http_proxy").value);
       fd.append("https_proxy", document.getElementById("https_proxy").value);
 
